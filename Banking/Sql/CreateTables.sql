@@ -5,7 +5,8 @@ create table Customer
     Address nvarchar(50) null,
     City nvarchar(40) null,
     PostCode nvarchar(4) null,
-    constraint PK_Customer primary key (CustomerID)
+    constraint PK_Customer primary key (CustomerID),
+    constraint CH_Customer_CustomerID check (CustomerID < 10000 and CustomerID >= 0)
 );
 
 create table Login
@@ -16,7 +17,7 @@ create table Login
     constraint PK_Login primary key (LoginID),
     constraint FK_Login_Customer foreign key (CustomerID) references Customer (CustomerID),
     constraint CH_Login_LoginID check (len(LoginID) = 8),
-    constraint CH_Login_PasswordHash check (len(PasswordHash) = 64)
+    constraint CH_Login_PasswordHash check (len(PasswordHash) = 64),
 );
 
 create table Account
@@ -28,7 +29,8 @@ create table Account
     constraint PK_Account primary key (AccountNumber),
     constraint FK_Account_Customer foreign key (CustomerID) references Customer (CustomerID),
     constraint CH_Account_AccountType check (AccountType in ('C', 'S')),
-    constraint CH_Account_Balance check (Balance >= 0)
+    constraint CH_Account_Balance check (Balance >= 0),
+    constraint CH_Account_AccountNumber check (AccountNumber >= 0 and AccountNumber < 10000)
 );
 
 create table [Transaction]
