@@ -1,0 +1,6 @@
+appsettings.json
+.DS_Store
+
+/Banking/bin
+/Banking/obj
+/Banking/.vs
