@@ -21,12 +21,21 @@ namespace Banking {
     }
     public class Transaction
     {
-        public DateTime TransactionTimeUtc { get; set; }
+        private DateTime _transactionTimeUtc;
+
+        public DateTime TransactionTimeUtc {
+            get => _transactionTimeUtc;
+            set => _transactionTimeUtc = value.ToUniversalTime();
+        }
         public char TransactionType { get; set; }
         public int AccountNumber { get; set; }
         public int DestinationAccountNumber { get; set; }
         public double Amount { get; set; }
         public string Comment { get; set; }
+
+        // helper properties
+        public DateTime TransactionTimeLocal =>
+            _transactionTimeUtc.ToLocalTime();
     }
     public class Login
     {
