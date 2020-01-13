@@ -3,24 +3,34 @@ using System.Data;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 
+using Banking.DBManager.Impl;
+
 namespace Banking.DBManager
 {
     delegate bool CheckAccount(Account a, out Exception err);
 
-    public class AccountManager
+    public interface IAccountManager
     {
-        internal AccountManagerImpl Impl { get; }
-        private TransactionManager TMgr { get; }
+        public void AddAccount(Account a);
+        public Account GetAccountByAccountNumber(int accNo);
+        public void Deposit(int accNo, double amount, string comment);
+        public void WithDraw(int accNo, double amount, string comment);
+        public void Transfer(int srcNo, int destNo, double amount,
+            string comment);
+    }
+
+    public class AccountManager : IAccountManager
+    {
+        private IAccountManagerImpl Impl { get; }
         public static Dictionary<char, double> MinBalance { get; } =
             new Dictionary<char, double> { { 'S', 0 }, { 'C', 200 } };
         public static Dictionary<char, double> MinOpeningBalance { get; } =
             new Dictionary<char, double> { { 'S', 100 }, { 'C', 500 } };
         public static char[] Types { get; } = { 'S', 'C' };
 
-        public AccountManager(string connS)
+        public AccountManager(IAccountManagerImpl i)
         {
-            Impl = new AccountManagerImpl(connS);
-            TMgr = new TransactionManager(connS);
+            Impl = i;
         }
 
         private bool CheckMinBalance(Account a, out Exception err)
@@ -95,15 +105,6 @@ minimum opening balance allowed");
                 a.Balance);
         }
 
-        public void AddAccountRecursively(Account a)
-        {
-            AddAccount(a);
-            foreach (Transaction t in a.Transactions)
-            {
-                TMgr.AddTransaction(t);
-            }
-        }
-
         public Account GetAccountByAccountNumber(int accNo)
         {
             return Impl.GetAccountByAccountNumber(accNo);
@@ -120,16 +121,7 @@ minimum opening balance allowed");
                 throw new ArgumentException(
                     "the specified account does not exist");
 
-            Impl.Deposit(accNo, amount);
-            Transaction depositT = new Transaction
-            {
-                TransactionTimeUtc = DateTime.UtcNow,
-                TransactionType = 'D',
-                AccountNumber = accNo,
-                Amount = amount,
-                Comment = comment
-            };
-            TMgr.AddTransaction(depositT);
+            Impl.Deposit(accNo, amount, comment);
         }
 
         public void WithDraw(int accNo, double amount, string comment)
@@ -147,16 +139,7 @@ minimum opening balance allowed");
                 throw new BalanceTooLowException(@"after withdrawal,
 remaining balance would be lower than the minimum balance allowed.");
 
-            Impl.WithDraw(accNo, amount);
-            Transaction t = new Transaction
-            {
-                TransactionType = 'W',
-                AccountNumber = accNo,
-                Amount = amount,
-                TransactionTimeUtc = DateTime.UtcNow,
-                Comment = comment
-            };
-            TMgr.AddTransaction(t);
+            Impl.WithDraw(accNo, amount, comment);
         }
 
         public void Transfer(int srcNo, int destNo, double amount,
@@ -180,158 +163,9 @@ remaining balance would be lower than the minimum balance allowed.");
                 throw new BalanceTooLowException(@"after transfer,
 remaining balance would be lower than the minimum balance allowed.");
 
-            Impl.Transfer(srcNo, destNo, amount);
-            Transaction t = new Transaction
-            {
-                TransactionTimeUtc = DateTime.UtcNow,
-                AccountNumber = srcNo,
-                DestinationAccountNumber = destNo,
-                Amount = amount,
-                Comment = comment,
-                TransactionType = 'T'
-            };
-            TMgr.AddTransaction(t);
+            Impl.Transfer(srcNo, destNo, amount, comment);
         }
     }
 
-    internal class AccountManagerImpl : DBManager {
-        public AccountManagerImpl(string connS) : base(connS, "Account") {
-        }
 
-        private static Account GetAccountFromReader(SqlDataReader reader)
-        {
-            return new Account
-            {
-                AccountNumber = (int)reader["AccountNumber"],
-                AccountType = (char)reader["AccountType"],
-                CustomerID = (int)reader["CustomerID"],
-                Balance = (double)reader["Balance"]
-            };
-        }
-
-        public void AddAccount(int custId, int accNo, char type, double balance) {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"insert into {TableName} (AccountNumber, AccountType, CustomerID, Balance
-values (@AccNo, @Type, @CustId, @Balance)";
-                command.Parameters.AddWithValue("AccNo", accNo);
-                command.Parameters.AddWithValue("Type", type);
-                command.Parameters.Add("Balance", SqlDbType.Money)
-                    .Value = balance;
-                command.Parameters.AddWithValue("CustId", custId);
-
-                command.ExecuteNonQuery();
-            }
-        }
-
-        public Account GetAccountByAccountNumber(int accNo) {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"select * from {TableName}
-where AccountNumber = @AccNo";
-                command.Parameters.AddWithValue("AccNo", accNo);
-
-                SqlDataReader reader = command.ExecuteReader();
-                if (reader.Read())
-                    return GetAccountFromReader(reader);
-                reader.Close();
-            }
-            return null;
-        }
-
-        public List<int> GetAccountNumbersForCustomer(string custId)
-        {
-            List<int> accNos = new List<int>();
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"select AccountNumber
-from {TableName} where CustomerID = @CustId";
-                command.Parameters.AddWithValue("CustId", custId);
-
-                SqlDataReader reader = command.ExecuteReader();
-                while (reader.Read())
-                {
-                    accNos.Add((int)reader["AccountNumber"]);
-                }
-                reader.Close();
-            }
-            return accNos;
-        }
-
-        public void Deposit(int accNo, double amount) {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"update {TableName}
-set Balance += @Amount
-where AccountNumber = @AccNo";
-                command.Parameters.Add("Amount", SqlDbType.Money)
-                       .Value = amount;
-                command.Parameters.AddWithValue("AccNo", accNo);
-
-                command.ExecuteNonQuery();
-            }
-        }
-
-        public void WithDraw(int accNo, double amount) {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"update {TableName}
-set Balance -= @Amount
-where AccountNumber = @AccNo";
-                command.Parameters.Add("Amount", SqlDbType.Money)
-                       .Value = amount;
-                command.Parameters.AddWithValue("AccNo", accNo);
-
-                command.ExecuteNonQuery();
-            }
-        }
-
-        public void Transfer(int srcNo, int destNo, double amount) {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                SqlTransaction transaction = conn.BeginTransaction("Transfer");
-                command.Connection = conn;
-                command.Transaction = transaction;
-                try
-                {
-                    command.CommandText = $@"update {TableName}
-set Balance += @Amount where AccountNumber = @SrcNo";
-                    command.Parameters.AddWithValue("SrcNo", srcNo);
-                    command.Parameters.Add("Amount", SqlDbType.Money).Value = amount;
-                    command.ExecuteNonQuery();
-
-                    command.CommandText = $@"update {TableName}
-set Balance -= @Amount where AccountNumber = @DestNo";
-                    command.Parameters.AddWithValue("DestNo", destNo);
-                    command.Parameters.Add("Amount", SqlDbType.Money).Value = amount;
-                    command.ExecuteNonQuery();
-
-                    transaction.Commit();
-                }
-                catch (Exception ex)
-                {
-                    transaction.Rollback();
-                    throw ex;
-                }
-            }
-        }
-    }
 }

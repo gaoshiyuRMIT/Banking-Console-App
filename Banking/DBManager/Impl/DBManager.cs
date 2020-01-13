@@ -3,7 +3,7 @@ using System.Data;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 
-namespace Banking.DBManager
+namespace Banking.DBManager.Impl
 {
     internal class DBManager {
         public string TableName { get; }
