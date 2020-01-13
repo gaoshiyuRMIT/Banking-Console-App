@@ -95,6 +95,15 @@ minimum opening balance allowed");
                 a.Balance);
         }
 
+        public void AddAccountRecursively(Account a)
+        {
+            AddAccount(a);
+            foreach (Transaction t in a.Transactions)
+            {
+                TMgr.AddTransaction(t);
+            }
+        }
+
         public Account GetAccountByAccountNumber(int accNo)
         {
             return Impl.GetAccountByAccountNumber(accNo);

@@ -71,6 +71,11 @@ specified in the login detail does not exist. please add relevant customers firs
             }
             return false;
         }
+
+        public bool AnyLogin()
+        {
+            return Impl.CountLogin() > 0;
+        }
     }
 
     internal class LoginManagerImpl : DBManager
@@ -125,5 +130,22 @@ where LoginID = @LoginId";
             throw new KeyNotFoundException(
                 "no customer exists with specified login id");
         }
-    }
+
+        public int CountLogin()
+        {
+            using (var conn = GetConnection())
+            {
+                conn.Open();
+
+                SqlCommand command = conn.CreateCommand();
+                command.CommandText = $"select count(*) from {TableName}";
+                SqlDataReader reader = command.ExecuteReader();
+                if (reader.Read())
+                {
+                    return (int)reader[0];
+                }
+                reader.Close();
+            }
+            throw new BankingException("sql count() returns 0 rows");
+        }
 }
