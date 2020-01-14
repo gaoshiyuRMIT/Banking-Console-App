@@ -101,9 +101,11 @@ from {TableName} where CustomerID = @CustId";
             command.CommandText = $@"update {TableName}
 set Balance += @Amount
 where AccountNumber = @AccNo";
-            command.Parameters.Add("Amount", SqlDbType.Money)
-                   .Value = amount;
-            command.Parameters.AddWithValue("AccNo", accNo);
+            if (!command.Parameters.Contains("Amount"))
+                command.Parameters.Add("Amount", SqlDbType.Money)
+                       .Value = amount;
+            if (!command.Parameters.Contains("AccNo"))
+                command.Parameters.AddWithValue("AccNo", accNo);
 
             command.ExecuteNonQuery();
         }
@@ -114,19 +116,23 @@ where AccountNumber = @AccNo";
                 conn.Open();
 
                 SqlCommand command = conn.CreateCommand();
-                SqlTransaction transaction = conn.BeginTransaction();
+                SqlTransaction transaction = conn.BeginTransaction("Deposit");
+                command.Transaction = transaction;
                 try
                 {
+                    command.Parameters.AddWithValue("AccNo", accNo);
+                    command.Parameters.Add("Amount", SqlDbType.Money)
+                        .Value = amount;
                     Deposit(accNo, amount, command);
-                    TMImpl.AddTransaction('D', accNo, 0, amount, comment,
-                        DateTime.UtcNow);
+                    TMImpl.AddTransaction('D', accNo, accNo, amount, comment,
+                        DateTime.UtcNow, command);
 
                     transaction.Commit();
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     transaction.Rollback();
-                    throw e;
+                    throw;
                 }
             }
         }
@@ -136,10 +142,11 @@ where AccountNumber = @AccNo";
             command.CommandText = $@"update {TableName}
 set Balance -= @Amount
 where AccountNumber = @AccNo";
-            command.Parameters.Add("Amount", SqlDbType.Money)
-                   .Value = amount;
-            command.Parameters.AddWithValue("AccNo", accNo);
-
+            if (!command.Parameters.Contains("AccNo"))
+                command.Parameters.AddWithValue("AccNo", accNo);
+            if (!command.Parameters.Contains("Amount"))
+                command.Parameters.Add("Amount", SqlDbType.Money)
+                    .Value = amount;
             command.ExecuteNonQuery();
         }
 
@@ -149,21 +156,30 @@ where AccountNumber = @AccNo";
                 conn.Open();
 
                 SqlCommand command = conn.CreateCommand();
-                SqlTransaction transaction = conn.BeginTransaction();
+                SqlTransaction transaction = conn.BeginTransaction("Withdraw");
                 command.Connection = conn;
                 command.Transaction = transaction;
+
                 try
                 {
+                    SqlParameter pAccNo = new SqlParameter(
+                        "AccNo", accNo);
+                    SqlParameter pAmount = new SqlParameter(
+                        "Amount", SqlDbType.Money);
+                    pAmount.Value = amount;
+                    command.Parameters.Add(pAccNo);
+                    command.Parameters.Add(pAmount);
+
                     WithDraw(accNo, amount, command);
-                    TMImpl.AddTransaction('W', accNo, 0, amount, comment,
+                    TMImpl.AddTransaction('W', accNo, accNo, amount, comment,
                         DateTime.UtcNow, command);
 
                     transaction.Commit();
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     transaction.Rollback();
-                    throw e;
+                    throw;
                 }
             }
         }
@@ -172,15 +188,18 @@ where AccountNumber = @AccNo";
             SqlCommand command)
         {
             command.CommandText = $@"update {TableName}
-set Balance += @Amount where AccountNumber = @SrcNo";
-            command.Parameters.AddWithValue("SrcNo", srcNo);
-            command.Parameters.Add("Amount", SqlDbType.Money).Value = amount;
+set Balance -= @Amount where AccountNumber = @SrcNo";
+            if (!command.Parameters.Contains("Amount"))
+                command.Parameters.Add("Amount", SqlDbType.Money)
+                    .Value = amount;
+            if (!command.Parameters.Contains("SrcNo"))
+                command.Parameters.AddWithValue("SrcNo", srcNo);
             command.ExecuteNonQuery();
 
             command.CommandText = $@"update {TableName}
-set Balance -= @Amount where AccountNumber = @DestNo";
-            command.Parameters.AddWithValue("DestNo", destNo);
-            command.Parameters.Add("Amount", SqlDbType.Money).Value = amount;
+set Balance += @Amount where AccountNumber = @DestNo";
+            if (!command.Parameters.Contains("DestNo"))
+                command.Parameters.AddWithValue("DestNo", destNo);
             command.ExecuteNonQuery();
         }
 
@@ -197,15 +216,18 @@ set Balance -= @Amount where AccountNumber = @DestNo";
                 command.Transaction = transaction;
                 try
                 {
+                    command.Parameters.Add("Amount", SqlDbType.Money)
+                        .Value = amount;
+
                     Transfer(srcNo, destNo, amount, command);
                     TMImpl.AddTransaction('T', srcNo, destNo, amount, comment,
                         DateTime.UtcNow, command);
                     transaction.Commit();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     transaction.Rollback();
-                    throw ex;
+                    throw;
                 }
             }
         }

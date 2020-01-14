@@ -41,13 +41,20 @@ namespace Banking.DBManager.Impl
         public void AddTransaction(char type, int accNo, int destAccNo,
             decimal amount, string comment, DateTime time, SqlCommand command)
         {
-            command.CommandText = $@"insert into {TableName} (TransactionType, AccountNumber, DestinationAccountNumber, Amount, Comment, TransactionTimeUtc)
+            command.CommandText = $@"insert into {TableName}
+(TransactionType, AccountNumber, DestinationAccountNumber, Amount, Comment, TransactionTimeUtc)
 values (@Type, @AccNo, @DestAccNo, @Amount, @Comment, @Time)";
+
+            Console.WriteLine(command.CommandText);
+
             command.Parameters.AddWithValue("Type", type);
-            command.Parameters.AddWithValue("AccNo", accNo);
-            command.Parameters.AddWithValue("DestAccNo", destAccNo);
-            command.Parameters.Add("Amount", SqlDbType.Money)
-                .Value = amount;
+            if (!command.Parameters.Contains("AccNo"))
+                command.Parameters.AddWithValue("AccNo", accNo);
+            if (!command.Parameters.Contains("DestAccNo"))
+                command.Parameters.AddWithValue("DestAccNo", destAccNo);
+            if (!command.Parameters.Contains("Amount"))
+                command.Parameters.Add("Amount", SqlDbType.Money)
+                    .Value = amount;
             command.Parameters.AddWithValue("Comment", comment);
             command.Parameters.AddWithValue("Time", time);
 
