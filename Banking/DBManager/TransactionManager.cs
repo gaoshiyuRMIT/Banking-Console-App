@@ -73,8 +73,9 @@ namespace Banking.DBManager
             int destNo = t.DestinationAccountNumber;
             if (t.TransactionType == 'T' && !(destNo >= 0 && destNo < 10000))
             {
-                string msg = @"for transfer transaction, destination account number
-must be specified and 4 digits long";
+                string msg = "for transfer transaction, "
+                    + "destination account number must be specified"
+                    + " and 4 digits long";
                 err = new ArgumentException(msg);
                 return false;
             }

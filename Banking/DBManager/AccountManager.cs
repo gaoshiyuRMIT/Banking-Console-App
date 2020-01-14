@@ -38,8 +38,8 @@ namespace Banking.DBManager
             err = null;
             if (a.Balance < MinOpeningBalance[a.AccountType])
             {
-                err = new BalanceTooLowException(@"account balance lower than
-minimum opening balance allowed");
+                err = new BalanceTooLowException("account balance lower"
+                    + " than minimum opening balance allowed");
                 return false;
             }
             return true;
@@ -136,8 +136,9 @@ minimum opening balance allowed");
                     "the specified account does not exist");
 
             if (acc.Balance - amount < MinBalance[acc.AccountType])
-                throw new BalanceTooLowException(@"after withdrawal,
-remaining balance would be lower than the minimum balance allowed.");
+                throw new BalanceTooLowException(
+                    "after withdrawal, remaining balance "
+                    + "would be lower than the minimum balance allowed.");
 
             Impl.WithDraw(accNo, amount, comment);
         }
@@ -160,12 +161,11 @@ remaining balance would be lower than the minimum balance allowed.");
                     "account to transfer to does not exist");
 
             if (srcAcc.Balance - amount < MinBalance[srcAcc.AccountType])
-                throw new BalanceTooLowException(@"after transfer,
-remaining balance would be lower than the minimum balance allowed.");
+                throw new BalanceTooLowException(
+                    "after transfer, remaining balance would be lower"
+                    + " than the minimum balance allowed.");
 
             Impl.Transfer(srcNo, destNo, amount, comment);
         }
     }
-
-
 }

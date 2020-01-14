@@ -62,8 +62,9 @@ namespace Banking.DBManager
 
             Customer c = CMgr.GetCustomerByCustomerID(l.CustomerID);
             if (c is null)
-                throw new KeyNotFoundException(@"customer with this id as
-specified in the login detail does not exist. please add relevant customers first.");
+                throw new KeyNotFoundException(
+                    "customer with this id as specified in the login detail" +
+                    " does not exist. please add relevant customers first.");
 
             Impl.AddLogin(l.CustomerID, l.LoginID, l.PasswordHash);
         }
