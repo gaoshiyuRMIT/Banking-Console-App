@@ -85,8 +85,8 @@ values (@Type, @AccNo, @DestAccNo, @Amount, @Comment, @Time)";
                 command.CommandText = $@"select * from {TableName}
 where AccountNumber = @AccNo
 order by TransactionTimeUtc desc
-offset @Offset
-fetch next @PageSize only";
+offset @Offset rows
+fetch next @PageSize rows only";
                 command.Parameters.AddWithValue("AccNo", accNo);
                 command.Parameters.AddWithValue("Offset", offset);
                 command.Parameters.AddWithValue("PageSize", pageSize);
