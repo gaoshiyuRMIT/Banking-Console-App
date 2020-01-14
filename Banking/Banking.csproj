@@ -14,5 +14,8 @@
   <ItemGroup>
     <Folder Include="DBManager\" />
     <Folder Include="DBManager\Impl\" />
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>
