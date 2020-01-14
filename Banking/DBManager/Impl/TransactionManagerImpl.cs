@@ -18,7 +18,7 @@ namespace Banking.DBManager.Impl
         public int CountChargedTransactions();
     }
 
-    internal class TransactionManagerImpl : DBManager, ITransactionManagerImpl
+    public class TransactionManagerImpl : DBManager, ITransactionManagerImpl
     {
         public TransactionManagerImpl(string connS) : base(connS, "[Transaction]")
         {

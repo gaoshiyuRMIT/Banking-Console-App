@@ -13,7 +13,7 @@ namespace Banking.DBManager.Impl
         public int CountLogin();
     }
 
-    internal class LoginManagerImpl : DBManager, ILoginManagerImpl
+    public class LoginManagerImpl : DBManager, ILoginManagerImpl
     {
         public LoginManagerImpl(string connS) : base(connS, "Login")
         {

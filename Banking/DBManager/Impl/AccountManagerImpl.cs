@@ -16,7 +16,7 @@ namespace Banking.DBManager.Impl {
             string comment);
     }
 
-    internal class AccountManagerImpl : DBManager, IAccountManagerImpl
+    public class AccountManagerImpl : DBManager, IAccountManagerImpl
     {
         private ITransactionManagerImpl TMImpl;
 

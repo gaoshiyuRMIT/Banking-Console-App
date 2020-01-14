@@ -13,7 +13,7 @@ namespace Banking.DBManager.Impl
         public int CountCustomer();
     }
 
-    internal class CustomerManagerImpl : DBManager, ICustomerManagerImpl
+    public class CustomerManagerImpl : DBManager, ICustomerManagerImpl
     {
 
         public CustomerManagerImpl(string connS) : base(connS, "Customer")

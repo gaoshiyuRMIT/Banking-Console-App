@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Banking.DBManager.Impl
 {
-    internal class DBManager {
+    public class DBManager {
         public string TableName { get; }
         public string ConnStr { get; }
 
