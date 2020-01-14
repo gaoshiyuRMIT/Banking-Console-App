@@ -9,7 +9,7 @@ namespace Banking
         public JsonSerializerSettings Settings => new JsonSerializerSettings
         {
             DateFormatString = "dd/MM/yyyy hh:mm:ss tt",
-            DateTimeZoneHandling = DateTimeZoneHandling.Local
+            DateTimeZoneHandling = DateTimeZoneHandling.Utc
         };
 
         public T Deserialize<T>(string json)
