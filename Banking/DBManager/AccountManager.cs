@@ -13,19 +13,19 @@ namespace Banking.DBManager
     {
         public void AddAccount(Account a);
         public Account GetAccountByAccountNumber(int accNo);
-        public void Deposit(int accNo, double amount, string comment);
-        public void WithDraw(int accNo, double amount, string comment);
-        public void Transfer(int srcNo, int destNo, double amount,
+        public void Deposit(int accNo, decimal amount, string comment);
+        public void WithDraw(int accNo, decimal amount, string comment);
+        public void Transfer(int srcNo, int destNo, decimal amount,
             string comment);
     }
 
     public class AccountManager : IAccountManager
     {
         private IAccountManagerImpl Impl { get; }
-        public static Dictionary<char, double> MinBalance { get; } =
-            new Dictionary<char, double> { { 'S', 0 }, { 'C', 200 } };
-        public static Dictionary<char, double> MinOpeningBalance { get; } =
-            new Dictionary<char, double> { { 'S', 100 }, { 'C', 500 } };
+        public static Dictionary<char, decimal> MinBalance { get; } =
+            new Dictionary<char, decimal> { { 'S', 0 }, { 'C', 200 } };
+        public static Dictionary<char, decimal> MinOpeningBalance { get; } =
+            new Dictionary<char, decimal> { { 'S', 100 }, { 'C', 500 } };
         public static char[] Types { get; } = { 'S', 'C' };
 
         public AccountManager(IAccountManagerImpl i)
@@ -110,7 +110,7 @@ namespace Banking.DBManager
             return Impl.GetAccountByAccountNumber(accNo);
         }
 
-        public void Deposit(int accNo, double amount, string comment)
+        public void Deposit(int accNo, decimal amount, string comment)
         {
             if (amount <= 0)
                 throw new ArgumentException(
@@ -124,7 +124,7 @@ namespace Banking.DBManager
             Impl.Deposit(accNo, amount, comment);
         }
 
-        public void WithDraw(int accNo, double amount, string comment)
+        public void WithDraw(int accNo, decimal amount, string comment)
         {
             if (amount <= 0)
                 throw new ArgumentException(
@@ -143,7 +143,7 @@ namespace Banking.DBManager
             Impl.WithDraw(accNo, amount, comment);
         }
 
-        public void Transfer(int srcNo, int destNo, double amount,
+        public void Transfer(int srcNo, int destNo, decimal amount,
             string comment)
         {
             if (amount <= 0)

@@ -9,9 +9,9 @@ namespace Banking.DBManager.Impl
     public interface ITransactionManagerImpl
     {
         public void AddTransaction(char type, int accNo, int destAccNo,
-            double amount, string comment, DateTime time, SqlCommand command);
+            decimal amount, string comment, DateTime time, SqlCommand command);
         public void AddTransaction(char type, int accNo, int destAccNo,
-            double amount, string comment, DateTime time);
+            decimal amount, string comment, DateTime time);
         public List<Transaction> GetTransactionsForAccount(int accNo, int pageSize,
             int page);
         // count withdrawals + transfers
@@ -32,14 +32,14 @@ namespace Banking.DBManager.Impl
                     .ToString().ToCharArray()[0],
                 AccountNumber = (int)reader["AccountNumber"],
                 DestinationAccountNumber = (int)reader["DestinationAccountNumber"],
-                Amount = (double)reader["Amount"],
+                Amount = (decimal)reader["Amount"],
                 Comment = (string)reader["Comment"],
                 TransactionTimeUtc = (DateTime)reader["TransactionTimeUtc"]
             };
         }
 
         public void AddTransaction(char type, int accNo, int destAccNo,
-            double amount, string comment, DateTime time, SqlCommand command)
+            decimal amount, string comment, DateTime time, SqlCommand command)
         {
             command.CommandText = $@"insert into {TableName} (TransactionType, AccountNumber, DestinationAccountNumber, Amount, Comment, TransactionTimeUtc)
 values (@Type, @AccNo, @DestAccNo, @Amount, @Comment, @Time)";
@@ -55,7 +55,7 @@ values (@Type, @AccNo, @DestAccNo, @Amount, @Comment, @Time)";
         }
 
         public void AddTransaction(char type, int accNo, int destAccNo,
-            double amount, string comment, DateTime time)
+            decimal amount, string comment, DateTime time)
         {
             using (var conn = GetConnection())
             {

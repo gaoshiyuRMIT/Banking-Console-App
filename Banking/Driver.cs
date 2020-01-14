@@ -94,17 +94,17 @@ namespace Banking
             return AMgr.GetAccountByAccountNumber(accNo);
         }
 
-        public void Deposit(int accNo, double amount, string comment)
+        public void Deposit(int accNo, decimal amount, string comment)
         {
             AMgr.Deposit(accNo, amount, comment);
         }
 
-        public void WithDraw(int accNo, double amount, string comment)
+        public void WithDraw(int accNo, decimal amount, string comment)
         {
             AMgr.WithDraw(accNo, amount, comment);
         }
 
-        public void Transfer(int srcNo, int destNo, double amount,
+        public void Transfer(int srcNo, int destNo, decimal amount,
             string comment)
         {
             AMgr.Transfer(srcNo, destNo, amount, comment);

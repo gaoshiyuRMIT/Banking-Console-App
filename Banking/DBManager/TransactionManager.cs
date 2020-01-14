@@ -20,8 +20,8 @@ namespace Banking.DBManager
     {
         private ITransactionManagerImpl Impl { get; }
         public static char[] Types { get; } = { 'D', 'W', 'T', 'S' };
-        public static double WithdrawFee { get; } = 0.1;
-        public static double TransferFee { get; } = 0.2;
+        public static decimal WithdrawFee { get; } = 0.1M;
+        public static decimal TransferFee { get; } = 0.2M;
         public static int NFreeTransactions { get; } = 4;
 
         public TransactionManager(ITransactionManagerImpl impl)

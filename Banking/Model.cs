@@ -17,7 +17,7 @@ namespace Banking {
         public int AccountNumber { get; set; }
         public char AccountType { get; set; }
         public int CustomerID { get; set; }
-        public double Balance { get; set; }
+        public decimal Balance { get; set; }
         public List<Transaction> Transactions { get; set; } =
             new List<Transaction>();
     }
@@ -32,7 +32,7 @@ namespace Banking {
         public char TransactionType { get; set; }
         public int AccountNumber { get; set; }
         public int DestinationAccountNumber { get; set; }
-        public double Amount { get; set; }
+        public decimal Amount { get; set; }
         public string Comment { get; set; }
 
         // helper properties
