@@ -8,8 +8,8 @@ namespace Banking.DBManager.Impl
     public interface ICustomerManagerImpl
     {
         public Customer GetCustomerByCustomerID(int id);
-        public void AddCustomer(int id, string name, string address,
-            string city, string postcode);
+        public void AddCustomer(int id, string name, object address,
+            object city, object postcode);
         public int CountCustomer();
     }
 
@@ -22,14 +22,16 @@ namespace Banking.DBManager.Impl
 
         private static Customer GetCustomerFromReader(SqlDataReader reader)
         {
-            return new Customer
-            {
-                CustomerID = (int)reader["CustomerID"],
-                Name = (string)reader["Name"],
-                Address = (string)reader["Address"],
-                City = (string)reader["City"],
-                PostCode = (string)reader["PostCode"]
-            };
+            Customer c = new Customer();
+            c.CustomerID = (int)reader["CustomerID"];
+            c.Name = (string)reader["Name"];
+            c.Address =
+                reader["Address"] is DBNull ? null : (string)reader["Address"];
+            c.City =
+                reader["City"] is DBNull ? null : (string)reader["City"];
+            c.PostCode =
+                reader["PostCode"] is DBNull ? null : (string)reader["PostCode"];
+            return c;
         }
 
         public Customer GetCustomerByCustomerID(int id)
@@ -51,8 +53,8 @@ where CustomerID = @Id";
             return null;
         }
 
-        public void AddCustomer(int id, string name, string address,
-            string city, string postcode)
+        public void AddCustomer(int id, string name, object address,
+            object city, object postcode)
         {
             using (var conn = GetConnection())
             {
@@ -62,11 +64,15 @@ where CustomerID = @Id";
                 command.CommandText = $@"insert into {TableName}
 (CustomerID, Name, Address, City, PostCode)
 values (@Id, @Name, @Address, @City, @Postcode)";
-                command.Parameters.AddWithValue("Id", id);
-                command.Parameters.AddWithValue("Name", name);
-                command.Parameters.AddWithValue("Address", address);
-                command.Parameters.AddWithValue("City", city);
-                command.Parameters.AddWithValue("Postcode", postcode);
+                command.Parameters.Add("Id", SqlDbType.Int).Value = id;
+                command.Parameters.Add("Name", SqlDbType.NVarChar)
+                    .Value = name;
+                command.Parameters.AddWithValue("Address",
+                    address ?? DBNull.Value);
+                command.Parameters.Add("City", SqlDbType.NVarChar)
+                    .Value = city ?? DBNull.Value;
+                command.Parameters.Add("Postcode", SqlDbType.NVarChar)
+                    .Value = postcode ?? DBNull.Value;
 
                 command.ExecuteNonQuery();
             }
