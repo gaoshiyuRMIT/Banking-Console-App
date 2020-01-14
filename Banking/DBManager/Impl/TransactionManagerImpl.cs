@@ -28,7 +28,8 @@ namespace Banking.DBManager.Impl
         {
             return new Transaction
             {
-                TransactionType = (char)reader["TransactionType"],
+                TransactionType = reader["TransactionType"]
+                    .ToString().ToCharArray()[0],
                 AccountNumber = (int)reader["AccountNumber"],
                 DestinationAccountNumber = (int)reader["DestinationAccountNumber"],
                 Amount = (double)reader["Amount"],

@@ -31,7 +31,7 @@ namespace Banking.DBManager.Impl {
             return new Account
             {
                 AccountNumber = (int)reader["AccountNumber"],
-                AccountType = (char)reader["AccountType"],
+                AccountType = reader["AccountType"].ToString().ToCharArray()[0],
                 CustomerID = (int)reader["CustomerID"],
                 Balance = (double)reader["Balance"]
             };
@@ -43,7 +43,8 @@ namespace Banking.DBManager.Impl {
                 conn.Open();
 
                 SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"insert into {TableName} (AccountNumber, AccountType, CustomerID, Balance
+                command.CommandText = $@"insert into {TableName}
+(AccountNumber, AccountType, CustomerID, Balance)
 values (@AccNo, @Type, @CustId, @Balance)";
                 command.Parameters.AddWithValue("AccNo", accNo);
                 command.Parameters.AddWithValue("Type", type);
