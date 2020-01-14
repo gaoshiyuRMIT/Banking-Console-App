@@ -26,7 +26,9 @@ namespace Banking
         private ICustomerManager CMgr { get; }
         private ILoginManager LMgr { get; }
 
-        public Driver()
+
+
+        public Driver(bool noInit = false)
         {
             ITransactionManagerImpl tmi =
                 new TransactionManagerImpl(ConnectionString);
@@ -42,25 +44,24 @@ namespace Banking
             TMgr = new TransactionManager(tmi);
             LMgr = new LoginManager(lmi, cmi);
 
-            InitDataFromWebServiceAsync().Wait();
+            if (!noInit)
+                InitDataFromWebService();
         }
 
-        public async Task InitDataFromWebServiceAsync()
+        public void GetJsonFromWebService(out string custJson,
+            out string loginJson)
         {
-            string custJson = "[]";
-            string loginJson = "[]";
+            custJson = "[]";
+            loginJson = "[]";
 
             if (!CMgr.AnyCustomer())
-                custJson = await Client.GetStringAsync(CustomerURL);
+                custJson = Client.GetStringAsync(CustomerURL).Result;
             if (!LMgr.AnyLogin())
-                loginJson = await Client.GetStringAsync(LoginURL);
+                loginJson = Client.GetStringAsync(LoginURL).Result;
+        }
 
-            // add Logins
-            List<Login> logins =
-                new JsonUtil().Deserialize<List<Login>>(loginJson);
-            logins.ForEach(LMgr.AddLogin);
-
-            // add customers
+        public void InitCustomerFromJson(string custJson)
+        {
             List<Customer> customers =
                 new JsonUtil().Deserialize<List<Customer>>(custJson);
             // add deposit transaction
@@ -70,9 +71,26 @@ namespace Banking
                     {
                         t.TransactionType = 'D';
                         t.AccountNumber = a.AccountNumber;
+                        t.DestinationAccountNumber = a.AccountNumber;
                         t.Amount = a.Balance;
+                        t.Comment = "account opening deposit";
                     })));
             customers.ForEach(AddCustomerRecursively);
+        }
+
+        public void InitLoginFromJson(string loginJson)
+        {
+            List<Login> logins =
+                new JsonUtil().Deserialize<List<Login>>(loginJson);
+            logins.ForEach(LMgr.AddLogin);
+        }
+
+        public void InitDataFromWebService()
+        {
+            string cj, lj;
+            GetJsonFromWebService(out cj, out lj);
+            InitCustomerFromJson(cj);
+            InitCustomerFromJson(lj);
         }
 
 
