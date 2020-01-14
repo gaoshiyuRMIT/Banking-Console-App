@@ -37,7 +37,8 @@ namespace Banking.DBManager.Impl {
             };
         }
 
-        public void AddAccount(int custId, int accNo, char type, decimal balance) {
+        public void AddAccount(int custId, int accNo, char type, decimal balance)
+        {
             using (var conn = GetConnection())
             {
                 conn.Open();

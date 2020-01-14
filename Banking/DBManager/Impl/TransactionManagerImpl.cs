@@ -45,8 +45,6 @@ namespace Banking.DBManager.Impl
 (TransactionType, AccountNumber, DestinationAccountNumber, Amount, Comment, TransactionTimeUtc)
 values (@Type, @AccNo, @DestAccNo, @Amount, @Comment, @Time)";
 
-            Console.WriteLine(command.CommandText);
-
             command.Parameters.AddWithValue("Type", type);
             if (!command.Parameters.Contains("AccNo"))
                 command.Parameters.AddWithValue("AccNo", accNo);
