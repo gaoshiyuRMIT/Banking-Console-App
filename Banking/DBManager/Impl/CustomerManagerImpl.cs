@@ -8,8 +8,8 @@ namespace Banking.DBManager.Impl
     public interface ICustomerManagerImpl
     {
         public Customer GetCustomerByCustomerID(int id);
-        public void AddCustomer(int id, string name, object address,
-            object city, object postcode);
+        public void AddCustomer(int id, string name, string address,
+            string city, string postcode);
         public int CountCustomer();
     }
 
@@ -53,8 +53,8 @@ where CustomerID = @Id";
             return null;
         }
 
-        public void AddCustomer(int id, string name, object address,
-            object city, object postcode)
+        public void AddCustomer(int id, string name, string address,
+            string city, string postcode)
         {
             using (var conn = GetConnection())
             {
@@ -68,11 +68,11 @@ values (@Id, @Name, @Address, @City, @Postcode)";
                 command.Parameters.Add("Name", SqlDbType.NVarChar)
                     .Value = name;
                 command.Parameters.AddWithValue("Address",
-                    address ?? DBNull.Value);
+                    (object)address ?? DBNull.Value);
                 command.Parameters.Add("City", SqlDbType.NVarChar)
-                    .Value = city ?? DBNull.Value;
+                    .Value = (object)city ?? DBNull.Value;
                 command.Parameters.Add("Postcode", SqlDbType.NVarChar)
-                    .Value = postcode ?? DBNull.Value;
+                    .Value = (object)postcode ?? DBNull.Value;
 
                 command.ExecuteNonQuery();
             }
