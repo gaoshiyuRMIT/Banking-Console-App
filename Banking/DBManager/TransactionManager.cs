@@ -11,6 +11,10 @@ namespace Banking.DBManager
 
     public interface ITransactionManager
     {
+        public static char[] Types { get; }
+        public static Dictionary<char, decimal> ServiceFee { get; }
+        public static int NFreeTransactions { get; }
+
         public void AddTransaction(Transaction t);
         public List<Transaction> GetTransactionsForAccount(int accNo,
             int pageSize, int page);
@@ -18,11 +22,11 @@ namespace Banking.DBManager
 
     public class TransactionManager : ITransactionManager
     {
-        private ITransactionManagerImpl Impl { get; }
         public static char[] Types { get; } = { 'D', 'W', 'T', 'S' };
-        public static decimal WithdrawFee { get; } = 0.1M;
-        public static decimal TransferFee { get; } = 0.2M;
+        public static Dictionary<char, decimal> ServiceFee { get; } =
+            new Dictionary<char, decimal> { { 'W', 0.1M }, { 'T', 0.2M } };
         public static int NFreeTransactions { get; } = 4;
+        private ITransactionManagerImpl Impl { get; }
 
         public TransactionManager(ITransactionManagerImpl impl)
         {
@@ -100,16 +104,12 @@ namespace Banking.DBManager
             Impl.AddTransaction(t.TransactionType, t.AccountNumber,
                                 t.DestinationAccountNumber, t.Amount,
                                 t.Comment, t.TransactionTimeUtc);
-            if (nWT >= NFreeTransactions)
+            if (nWT >= NFreeTransactions &&
+                (t.TransactionType == 'W' || t.TransactionType == 'T'))
             {
-                if (t.TransactionType == 'W')
-                    Impl.AddTransaction('S', t.AccountNumber,
-                        t.DestinationAccountNumber,
-                        WithdrawFee, "", DateTime.UtcNow);
-                else if (t.TransactionType == 'T')
-                    Impl.AddTransaction('S', t.AccountNumber,
-                        t.DestinationAccountNumber,
-                        TransferFee, "", DateTime.UtcNow);    
+                Impl.AddTransaction('S', t.AccountNumber,
+                    t.DestinationAccountNumber, ServiceFee[t.TransactionType],
+                    "", DateTime.UtcNow);
             }            
         }
         public List<Transaction> GetTransactionsForAccount(int accNo,

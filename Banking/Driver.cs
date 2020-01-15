@@ -39,7 +39,7 @@ namespace Banking
             ILoginManagerImpl lmi =
                 new LoginManagerImpl(ConnectionString);
 
-            AMgr = new AccountManager(ami);
+            AMgr = new AccountManager(ami, tmi);
             CMgr = new CustomerManager(cmi);
             TMgr = new TransactionManager(tmi);
             LMgr = new LoginManager(lmi, cmi);

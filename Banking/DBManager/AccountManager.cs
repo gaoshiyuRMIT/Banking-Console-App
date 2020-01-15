@@ -22,15 +22,17 @@ namespace Banking.DBManager
     public class AccountManager : IAccountManager
     {
         private IAccountManagerImpl Impl { get; }
+        private ITransactionManagerImpl TMImpl { get; }
         public static Dictionary<char, decimal> MinBalance { get; } =
             new Dictionary<char, decimal> { { 'S', 0 }, { 'C', 200 } };
         public static Dictionary<char, decimal> MinOpeningBalance { get; } =
             new Dictionary<char, decimal> { { 'S', 100 }, { 'C', 500 } };
         public static char[] Types { get; } = { 'S', 'C' };
 
-        public AccountManager(IAccountManagerImpl i)
+        public AccountManager(IAccountManagerImpl i, ITransactionManagerImpl ti)
         {
             Impl = i;
+            TMImpl = ti;
         }
 
         private bool CheckMinBalance(Account a, out Exception err)
@@ -135,12 +137,17 @@ namespace Banking.DBManager
                 throw new ArgumentException(
                     "the specified account does not exist");
 
-            if (acc.Balance - amount < MinBalance[acc.AccountType])
+            decimal serviceFee = 0;
+            if (TMImpl.CountChargedTransactions() >=
+                TransactionManager.NFreeTransactions)
+                serviceFee = TransactionManager.ServiceFee['W'];
+
+            if (acc.Balance - amount - serviceFee < MinBalance[acc.AccountType]) 
                 throw new BalanceTooLowException(
-                    "after withdrawal, remaining balance "
+                    "after withdrawal (including service fee), remaining balance "
                     + "would be lower than the minimum balance allowed.");
 
-            Impl.WithDraw(accNo, amount, comment);
+            Impl.WithDraw(accNo, amount, comment, serviceFee);
         }
 
         public void Transfer(int srcNo, int destNo, decimal amount,
@@ -160,12 +167,18 @@ namespace Banking.DBManager
                 throw new ArgumentException(
                     "account to transfer to does not exist");
 
-            if (srcAcc.Balance - amount < MinBalance[srcAcc.AccountType])
-                throw new BalanceTooLowException(
-                    "after transfer, remaining balance would be lower"
-                    + " than the minimum balance allowed.");
+            decimal serviceFee = 0;
+            if (TMImpl.CountChargedTransactions() >=
+                TransactionManager.NFreeTransactions)
+                serviceFee = TransactionManager.ServiceFee['T'];
 
-            Impl.Transfer(srcNo, destNo, amount, comment);
+            if (srcAcc.Balance - amount - serviceFee
+                < MinBalance[srcAcc.AccountType])
+                throw new BalanceTooLowException(
+                    "after transfer (including service fee), remaining balance "
+                    + "would be lower than the minimum balance allowed.");
+
+            Impl.Transfer(srcNo, destNo, amount, comment, serviceFee);
         }
     }
 }

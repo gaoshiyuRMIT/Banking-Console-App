@@ -11,13 +11,14 @@ namespace Banking.DBManager.Impl {
         public Account GetAccountByAccountNumber(int accNo);
         public List<int> GetAccountNumbersForCustomer(string custId);
         public void Deposit(int accNo, decimal amount, string comment);
-        public void WithDraw(int accNo, decimal amount, string comment);
+        public void WithDraw(int accNo, decimal amount, string comment, decimal fee);
         public void Transfer(int srcNo, int destNo, decimal amount,
-            string comment);
+            string comment, decimal fee);
     }
 
     public class AccountManagerImpl : DBManager, IAccountManagerImpl
     {
+
         private ITransactionManagerImpl TMImpl;
 
         public AccountManagerImpl(string connS, ITransactionManagerImpl tmi)
@@ -151,7 +152,7 @@ where AccountNumber = @AccNo";
             command.ExecuteNonQuery();
         }
 
-        public void WithDraw(int accNo, decimal amount, string comment) {
+        public void WithDraw(int accNo, decimal amount, string comment, decimal serviceFee) {
             using (var conn = GetConnection())
             {
                 conn.Open();
@@ -174,6 +175,12 @@ where AccountNumber = @AccNo";
                     WithDraw(accNo, amount, command);
                     TMImpl.AddTransaction('W', accNo, null, amount, comment,
                         DateTime.UtcNow, command);
+                    if (serviceFee > 0)
+                    {
+                        TMImpl.AddTransaction('S', accNo, null, serviceFee,
+                            comment, DateTime.UtcNow, command);
+                        WithDraw(accNo, serviceFee, command);
+                    }
 
                     transaction.Commit();
                 }
@@ -205,7 +212,7 @@ set Balance += @Amount where AccountNumber = @DestNo";
         }
 
         public void Transfer(int srcNo, int destNo, decimal amount,
-            string comment)
+            string comment, decimal serviceFee)
         {
             using (var conn = GetConnection())
             {
@@ -223,6 +230,13 @@ set Balance += @Amount where AccountNumber = @DestNo";
                     Transfer(srcNo, destNo, amount, command);
                     TMImpl.AddTransaction('T', srcNo, destNo, amount, comment,
                         DateTime.UtcNow, command);
+                    if (serviceFee > 0)
+                    {
+                        TMImpl.AddTransaction('S', srcNo, null, serviceFee,
+                            comment, DateTime.UtcNow, command);
+                        WithDraw(srcNo, serviceFee, command);
+                    }
+
                     transaction.Commit();
                 }
                 catch (Exception)
