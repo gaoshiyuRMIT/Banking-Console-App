@@ -43,7 +43,11 @@ namespace Banking.DBManager.Impl
                 SqlCommand command = conn.CreateCommand();
                 command.CommandText = $@"select * from {TableName}
 where CustomerID = @Id";
-                command.Parameters.AddWithValue("Id", id);
+                DBUtil.AddSqlParam(command.Parameters,
+                    new Dictionary<string, object>
+                    {
+                        ["Id"] = id
+                    });
 
                 SqlDataReader reader = command.ExecuteReader();
                 if (reader.Read())
@@ -64,15 +68,16 @@ where CustomerID = @Id";
                 command.CommandText = $@"insert into {TableName}
 (CustomerID, Name, Address, City, PostCode)
 values (@Id, @Name, @Address, @City, @Postcode)";
-                command.Parameters.Add("Id", SqlDbType.Int).Value = id;
-                command.Parameters.Add("Name", SqlDbType.NVarChar)
-                    .Value = name;
-                command.Parameters.AddWithValue("Address",
-                    (object)address ?? DBNull.Value);
-                command.Parameters.Add("City", SqlDbType.NVarChar)
-                    .Value = (object)city ?? DBNull.Value;
-                command.Parameters.Add("Postcode", SqlDbType.NVarChar)
-                    .Value = (object)postcode ?? DBNull.Value;
+
+                DBUtil.AddSqlParam(command.Parameters,
+                    new Dictionary<string, object>
+                    {
+                        ["Id"] = id,
+                        ["Name"] = name,
+                        ["Address"] = (object)address ?? DBNull.Value,
+                        ["City"] = (object)city ?? DBNull.Value,
+                        ["Postcode"] = (object)postcode ?? DBNull.Value
+                    });
 
                 command.ExecuteNonQuery();
             }

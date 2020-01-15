@@ -38,6 +38,7 @@ namespace Banking.DBManager.Impl {
             };
         }
 
+
         public void AddAccount(int custId, int accNo, char type, decimal balance)
         {
             using (var conn = GetConnection())
@@ -48,12 +49,11 @@ namespace Banking.DBManager.Impl {
                 command.CommandText = $@"insert into {TableName}
 (AccountNumber, AccountType, CustomerID, Balance)
 values (@AccNo, @Type, @CustId, @Balance)";
-                command.Parameters.AddWithValue("AccNo", accNo);
-                command.Parameters.AddWithValue("Type", type);
-                command.Parameters.Add("Balance", SqlDbType.Money)
-                    .Value = balance;
-                command.Parameters.AddWithValue("CustId", custId);
-
+                DBUtil.AddSqlParam(command.Parameters, new Dictionary<string, object>
+                {
+                    ["AccNo"] = accNo, ["Type"] = type,
+                    ["Balance"] = balance, ["CustId"] = custId
+                });
                 command.ExecuteNonQuery();
             }
         }
@@ -66,7 +66,10 @@ values (@AccNo, @Type, @CustId, @Balance)";
                 SqlCommand command = conn.CreateCommand();
                 command.CommandText = $@"select * from {TableName}
 where AccountNumber = @AccNo";
-                command.Parameters.AddWithValue("AccNo", accNo);
+                DBUtil.AddSqlParam(command.Parameters, new Dictionary<string, object>
+                {
+                    ["AccNo"] = accNo
+                });
 
                 SqlDataReader reader = command.ExecuteReader();
                 if (reader.Read())
@@ -86,7 +89,8 @@ where AccountNumber = @AccNo";
                 SqlCommand command = conn.CreateCommand();
                 command.CommandText = $@"select AccountNumber
 from {TableName} where CustomerID = @CustId";
-                command.Parameters.AddWithValue("CustId", custId);
+                DBUtil.AddSqlParam(command.Parameters,
+                    new Dictionary<string, object> { { "CustId", custId } });
 
                 SqlDataReader reader = command.ExecuteReader();
                 while (reader.Read())
@@ -103,11 +107,11 @@ from {TableName} where CustomerID = @CustId";
             command.CommandText = $@"update {TableName}
 set Balance += @Amount
 where AccountNumber = @AccNo";
-            if (!command.Parameters.Contains("Amount"))
-                command.Parameters.Add("Amount", SqlDbType.Money)
-                       .Value = amount;
-            if (!command.Parameters.Contains("AccNo"))
-                command.Parameters.AddWithValue("AccNo", accNo);
+            DBUtil.AddSqlParam(command.Parameters,
+                new Dictionary<string, object>
+                {
+                    ["Amount"] = amount, ["AccNo"] = accNo
+                });
 
             command.ExecuteNonQuery();
         }
@@ -122,9 +126,6 @@ where AccountNumber = @AccNo";
                 command.Transaction = transaction;
                 try
                 {
-                    command.Parameters.AddWithValue("AccNo", accNo);
-                    command.Parameters.Add("Amount", SqlDbType.Money)
-                        .Value = amount;
                     Deposit(accNo, amount, command);
                     TMImpl.AddTransaction('D', accNo, null, amount, comment,
                         DateTime.UtcNow, command);
@@ -144,11 +145,12 @@ where AccountNumber = @AccNo";
             command.CommandText = $@"update {TableName}
 set Balance -= @Amount
 where AccountNumber = @AccNo";
-            if (!command.Parameters.Contains("AccNo"))
-                command.Parameters.AddWithValue("AccNo", accNo);
-            if (!command.Parameters.Contains("Amount"))
-                command.Parameters.Add("Amount", SqlDbType.Money)
-                    .Value = amount;
+            DBUtil.AddSqlParam(command.Parameters,
+                new Dictionary<string, object>
+                {
+                    ["Amount"] = amount,
+                    ["AccNo"] = accNo
+                });
             command.ExecuteNonQuery();
         }
 
@@ -164,14 +166,6 @@ where AccountNumber = @AccNo";
 
                 try
                 {
-                    SqlParameter pAccNo = new SqlParameter(
-                        "AccNo", accNo);
-                    SqlParameter pAmount = new SqlParameter(
-                        "Amount", SqlDbType.Money);
-                    pAmount.Value = amount;
-                    command.Parameters.Add(pAccNo);
-                    command.Parameters.Add(pAmount);
-
                     WithDraw(accNo, amount, command);
                     TMImpl.AddTransaction('W', accNo, null, amount, comment,
                         DateTime.UtcNow, command);
@@ -197,17 +191,21 @@ where AccountNumber = @AccNo";
         {
             command.CommandText = $@"update {TableName}
 set Balance -= @Amount where AccountNumber = @SrcNo";
-            if (!command.Parameters.Contains("Amount"))
-                command.Parameters.Add("Amount", SqlDbType.Money)
-                    .Value = amount;
-            if (!command.Parameters.Contains("SrcNo"))
-                command.Parameters.AddWithValue("SrcNo", srcNo);
+            DBUtil.AddSqlParam(command.Parameters,
+                new Dictionary<string, object>
+                {
+                    ["Amount"] = amount,
+                    ["SrcNo"] = srcNo
+                });
             command.ExecuteNonQuery();
 
             command.CommandText = $@"update {TableName}
 set Balance += @Amount where AccountNumber = @DestNo";
-            if (!command.Parameters.Contains("DestNo"))
-                command.Parameters.AddWithValue("DestNo", destNo);
+            DBUtil.AddSqlParam(command.Parameters,
+                new Dictionary<string, object>
+                {
+                    ["DestNo"] = destNo
+                });
             command.ExecuteNonQuery();
         }
 
@@ -224,15 +222,12 @@ set Balance += @Amount where AccountNumber = @DestNo";
                 command.Transaction = transaction;
                 try
                 {
-                    command.Parameters.Add("Amount", SqlDbType.Money)
-                        .Value = amount;
-
                     Transfer(srcNo, destNo, amount, command);
                     TMImpl.AddTransaction('T', srcNo, destNo, amount, comment,
                         DateTime.UtcNow, command);
                     if (serviceFee > 0)
                     {
-                        TMImpl.AddTransaction('S', srcNo, null, serviceFee,
+                        TMImpl.AddTransaction('S', srcNo, destNo, serviceFee,
                             comment, DateTime.UtcNow, command);
                         WithDraw(srcNo, serviceFee, command);
                     }

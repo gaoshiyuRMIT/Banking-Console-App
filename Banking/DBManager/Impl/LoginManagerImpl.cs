@@ -29,9 +29,13 @@ namespace Banking.DBManager.Impl
                 command.CommandText = $@"insert into {TableName}
 (LoginID, CustomerID, PasswordHash)
 values (@LoginId, @CustId, @PwdHash)";
-                command.Parameters.AddWithValue("LoginId", loginId);
-                command.Parameters.AddWithValue("CustId", custId);
-                command.Parameters.AddWithValue("PwdHash", pwdHash);
+                DBUtil.AddSqlParam(command.Parameters,
+                    new Dictionary<string, object>
+                    {
+                        { "LoginId", loginId},
+                        {"CustId", custId },
+                        {"PwdHash", pwdHash }
+                    });
 
                 command.ExecuteNonQuery();
             }

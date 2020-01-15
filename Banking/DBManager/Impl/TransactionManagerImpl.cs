@@ -51,16 +51,16 @@ namespace Banking.DBManager.Impl
 (TransactionType, AccountNumber, DestinationAccountNumber, Amount, Comment, TransactionTimeUtc)
 values (@Type, @AccNo, @DestAccNo, @Amount, @Comment, @Time)";
 
-            command.Parameters.AddWithValue("Type", type);
-            if (!command.Parameters.Contains("AccNo"))
-                command.Parameters.AddWithValue("AccNo", accNo);
-            if (!command.Parameters.Contains("DestAccNo"))
-                command.Parameters.AddWithValue("DestAccNo", (object)destAccNo ?? DBNull.Value);
-            if (!command.Parameters.Contains("Amount"))
-                command.Parameters.Add("Amount", SqlDbType.Money)
-                    .Value = amount;
-            command.Parameters.AddWithValue("Comment", (object)comment ?? DBNull.Value);
-            command.Parameters.AddWithValue("Time", time);
+            DBUtil.AddSqlParam(command.Parameters,
+                new Dictionary<string, object>
+                {
+                    { "Type", type },
+                    {"AccNo", accNo },
+                    {"DestAccNo", (object)destAccNo ?? DBNull.Value },
+                    {"Amount", amount },
+                    {"Comment", (object)comment ?? DBNull.Value },
+                    {"Time", time }
+                });
 
             command.ExecuteNonQuery();
         }
@@ -93,9 +93,14 @@ where AccountNumber = @AccNo
 order by TransactionTimeUtc desc
 offset @Offset rows
 fetch next @PageSize rows only";
-                command.Parameters.AddWithValue("AccNo", accNo);
-                command.Parameters.AddWithValue("Offset", offset);
-                command.Parameters.AddWithValue("PageSize", pageSize);
+
+                DBUtil.AddSqlParam(command.Parameters,
+                    new Dictionary<string, object>
+                    {
+                        {"AccNo", accNo },
+                        {"Offset", offset },
+                        {"PageSize", pageSize }
+                    });
 
                 SqlDataReader reader = command.ExecuteReader();
                 while (reader.Read())
