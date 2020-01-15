@@ -104,13 +104,6 @@ namespace Banking.DBManager
             Impl.AddTransaction(t.TransactionType, t.AccountNumber,
                                 t.DestinationAccountNumber, t.Amount,
                                 t.Comment, t.TransactionTimeUtc);
-            if (nWT >= NFreeTransactions &&
-                (t.TransactionType == 'W' || t.TransactionType == 'T'))
-            {
-                Impl.AddTransaction('S', t.AccountNumber,
-                    t.DestinationAccountNumber, ServiceFee[t.TransactionType],
-                    "", DateTime.UtcNow);
-            }            
         }
         public List<Transaction> GetTransactionsForAccount(int accNo,
             int pageSize, int page)
