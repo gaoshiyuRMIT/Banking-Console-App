@@ -74,8 +74,9 @@ namespace Banking.DBManager
             out Exception err)
         {
             err = null;
-            int destNo = t.DestinationAccountNumber;
-            if (t.TransactionType == 'T' && !(destNo >= 0 && destNo < 10000))
+            int? destNo = t.DestinationAccountNumber;
+            if (t.TransactionType == 'T' && destNo != null
+                && !(destNo >= 0 && destNo < 10000))
             {
                 string msg = "for transfer transaction, "
                     + "destination account number must be specified"
@@ -91,9 +92,8 @@ namespace Banking.DBManager
             Exception err;
             CheckTransaction[] rules =
             {
-                CheckTransactionType,
-                CheckAccountNumber,
-                CheckAccountNumber
+                CheckTransactionType, CheckAccountNumber,
+                CheckDestinationAccountNumber, CheckAmount
             };
             foreach (var check in rules)
                 if (!check(t, out err))

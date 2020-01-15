@@ -26,16 +26,22 @@ namespace Banking.DBManager.Impl
 
         private static Transaction GetTransactionFromReader(SqlDataReader reader)
         {
-            return new Transaction
+            Transaction t = new Transaction
             {
                 TransactionType = reader["TransactionType"]
                     .ToString().ToCharArray()[0],
                 AccountNumber = (int)reader["AccountNumber"],
-                DestinationAccountNumber = (int)reader["DestinationAccountNumber"],
                 Amount = (decimal)reader["Amount"],
-                Comment = (string)reader["Comment"],
                 TransactionTimeUtc = (DateTime)reader["TransactionTimeUtc"]
             };
+
+            t.DestinationAccountNumber =
+                reader["DestinationAccountNumber"] is DBNull ?
+                    (int?)null : (int)reader["DestinationAccountNumber"];
+            t.Comment =
+                reader["Comment"] is DBNull ? null : (string)reader["Comment"];
+
+            return t;
         }
 
         public void AddTransaction(char type, int accNo, int? destAccNo,
