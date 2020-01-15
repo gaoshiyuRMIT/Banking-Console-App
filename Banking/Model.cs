@@ -9,7 +9,8 @@ namespace Banking {
         public string Address { get; set; }
         public string City { get; set; }
         public string PostCode { get; set; }
-        public List<Account> Accounts { get; set; }
+        public List<Account> Accounts { get; set; } =
+            new List<Account>();
     }
     public class Account
     {
@@ -17,7 +18,8 @@ namespace Banking {
         public char AccountType { get; set; }
         public int CustomerID { get; set; }
         public double Balance { get; set; }
-        public List<Transaction> Transactions { get; set; }
+        public List<Transaction> Transactions { get; set; } =
+            new List<Transaction>();
     }
     public class Transaction
     {

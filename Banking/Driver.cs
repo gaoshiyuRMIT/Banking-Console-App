@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 using Microsoft.Extensions.Configuration;
 
@@ -16,6 +18,7 @@ namespace Banking
         private static string CustomerURL { get; } = Config["CustomerAPI"];
         private static string LoginURL { get; } = Config["LoginAPI"];
         private static int TransactionPageSize { get; } = 4;
+        private static HttpClient Client { get; } = new HttpClient();
 
         public static AccountManager AMgr { get; }
             = new AccountManager(ConnectionString);
@@ -26,10 +29,39 @@ namespace Banking
         public static LoginManager LMgr { get; }
             = new LoginManager(ConnectionString);
 
-        public void InitCustomerData() {
+        public Driver()
+        {
+            InitDataFromWebServiceAsync().Wait();
         }
 
-        public void InitLoginData() {
+        public async Task InitDataFromWebServiceAsync()
+        {
+            string custJson = "[]";
+            string loginJson = "[]";
+            
+            if (!CMgr.AnyCustomer())
+                custJson = await Client.GetStringAsync(CustomerURL);
+            if (!LMgr.AnyLogin())
+                loginJson = await Client.GetStringAsync(LoginURL);
+
+            // add customers
+            List<Customer> customers =
+                new JsonUtil().Deserialize<List<Customer>>(custJson);
+              // add deposit transaction
+            customers.ForEach(c =>
+                c.Accounts.ForEach(a =>
+                    a.Transactions.ForEach(t =>
+                    {
+                        t.TransactionType = 'D';
+                        t.AccountNumber = a.AccountNumber;
+                        t.Amount = a.Balance;
+                    })));
+            customers.ForEach(CMgr.AddCustomerRecursively);
+
+            // add Logins
+            List<Login> logins =
+                new JsonUtil().Deserialize<List<Login>>(loginJson);
+            logins.ForEach(LMgr.AddLogin);
         }
 
         public Account GetPagedStatementByAccountNumber(int accNo, int page)

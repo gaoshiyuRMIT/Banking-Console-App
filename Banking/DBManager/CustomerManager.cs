@@ -10,10 +10,12 @@ namespace Banking.DBManager
     public class CustomerManager
     {
         internal CustomerManagerImpl Impl { get; }
+        private AccountManager AMgr { get; }
 
         public CustomerManager(string connS)
         {
             Impl = new CustomerManagerImpl(connS);
+            AMgr = new AccountManager(connS);
         }
 
         public bool CheckCustomerID(Customer c, out Exception err)
@@ -26,6 +28,15 @@ namespace Banking.DBManager
                 return false;
             }
             return true;
+        }
+
+        public void AddCustomerRecursively(Customer c)
+        {
+            AddCustomer(c);
+            foreach (Account a in c.Accounts)
+            {
+                AMgr.AddAccountRecursively(a);
+            }
         }
 
         public void AddCustomer(Customer c)
@@ -48,6 +59,11 @@ namespace Banking.DBManager
         public Customer GetCustomerByCustomerID(int custId)
         {
             return Impl.GetCustomerByCustomerID(custId);
+        }
+
+        public bool AnyCustomer()
+        {
+            return Impl.CountCustomer() > 0;
         }
     }
 
@@ -86,6 +102,7 @@ where CustomerID = @Id";
             }
             return null;
         }
+
         public void AddCustomer(int id, string name, string address,
             string city, string postcode) {
             using (var conn = GetConnection())
@@ -106,7 +123,21 @@ values (@Id, @Name, @Address, @City, @Postcode)";
             }
         }
 
+        public int CountCustomer()
+        {
+            using (var conn = GetConnection())
+            {
+                conn.Open();
 
-    }
+                SqlCommand command = conn.CreateCommand();
+                command.CommandText = $"select count(*) from {TableName}";
+
+                SqlDataReader reader = command.ExecuteReader();
+                if (reader.Read())
+                    return (int)reader[0];
+                reader.Close();
+            }
+            throw new BankingException("sql count() returns 0 rows");
+        }
 
 }
