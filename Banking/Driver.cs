@@ -90,7 +90,7 @@ namespace Banking
             string cj, lj;
             GetJsonFromWebService(out cj, out lj);
             InitCustomerFromJson(cj);
-            InitCustomerFromJson(lj);
+            InitLoginFromJson(lj);
         }
 
 
