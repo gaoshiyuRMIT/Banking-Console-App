@@ -8,9 +8,9 @@ namespace Banking.DBManager.Impl
 {
     public interface ITransactionManagerImpl
     {
-        public void AddTransaction(char type, int accNo, int destAccNo,
+        public void AddTransaction(char type, int accNo, int? destAccNo,
             decimal amount, string comment, DateTime time, SqlCommand command);
-        public void AddTransaction(char type, int accNo, int destAccNo,
+        public void AddTransaction(char type, int accNo, int? destAccNo,
             decimal amount, string comment, DateTime time);
         public List<Transaction> GetTransactionsForAccount(int accNo, int pageSize,
             int page);
@@ -38,7 +38,7 @@ namespace Banking.DBManager.Impl
             };
         }
 
-        public void AddTransaction(char type, int accNo, int destAccNo,
+        public void AddTransaction(char type, int accNo, int? destAccNo,
             decimal amount, string comment, DateTime time, SqlCommand command)
         {
             command.CommandText = $@"insert into {TableName}
@@ -49,17 +49,17 @@ values (@Type, @AccNo, @DestAccNo, @Amount, @Comment, @Time)";
             if (!command.Parameters.Contains("AccNo"))
                 command.Parameters.AddWithValue("AccNo", accNo);
             if (!command.Parameters.Contains("DestAccNo"))
-                command.Parameters.AddWithValue("DestAccNo", destAccNo);
+                command.Parameters.AddWithValue("DestAccNo", (object)destAccNo ?? DBNull.Value);
             if (!command.Parameters.Contains("Amount"))
                 command.Parameters.Add("Amount", SqlDbType.Money)
                     .Value = amount;
-            command.Parameters.AddWithValue("Comment", comment);
+            command.Parameters.AddWithValue("Comment", (object)comment ?? DBNull.Value);
             command.Parameters.AddWithValue("Time", time);
 
             command.ExecuteNonQuery();
         }
 
-        public void AddTransaction(char type, int accNo, int destAccNo,
+        public void AddTransaction(char type, int accNo, int? destAccNo,
             decimal amount, string comment, DateTime time)
         {
             using (var conn = GetConnection())

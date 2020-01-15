@@ -125,7 +125,7 @@ where AccountNumber = @AccNo";
                     command.Parameters.Add("Amount", SqlDbType.Money)
                         .Value = amount;
                     Deposit(accNo, amount, command);
-                    TMImpl.AddTransaction('D', accNo, accNo, amount, comment,
+                    TMImpl.AddTransaction('D', accNo, null, amount, comment,
                         DateTime.UtcNow, command);
 
                     transaction.Commit();
@@ -172,7 +172,7 @@ where AccountNumber = @AccNo";
                     command.Parameters.Add(pAmount);
 
                     WithDraw(accNo, amount, command);
-                    TMImpl.AddTransaction('W', accNo, accNo, amount, comment,
+                    TMImpl.AddTransaction('W', accNo, null, amount, comment,
                         DateTime.UtcNow, command);
 
                     transaction.Commit();
