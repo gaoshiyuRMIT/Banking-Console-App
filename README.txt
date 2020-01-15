@@ -1,3 +1,7 @@
+Group Info:
+    Shiyu Gao, s3734720
+    Louis Abasta, s3553348
+
 Design Patterns Used:
     - Facade
         In general, the facade pattern offers a simplified interface for complex systems. It is used when several complex systems need to interact in a certain way to perform the functionality we want, or when we only need to use a subset of the functionalities the complex systems offer, and in a certain way.
