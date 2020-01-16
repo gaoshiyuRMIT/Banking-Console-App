@@ -9,7 +9,7 @@ namespace Banking.DBManager.Impl {
         public void AddAccount(int custId, int accNo, char type,
             decimal balance);
         public Account GetAccountByAccountNumber(int accNo);
-        public List<int> GetAccountNumbersForCustomer(string custId);
+        public List<int> GetAccountNumbersForCustomer(int custId);
         public void Deposit(int accNo, decimal amount, string comment);
         public void WithDraw(int accNo, decimal amount, string comment, decimal fee);
         public void Transfer(int srcNo, int destNo, decimal amount,
@@ -79,7 +79,7 @@ where AccountNumber = @AccNo";
             return null;
         }
 
-        public List<int> GetAccountNumbersForCustomer(string custId)
+        public List<int> GetAccountNumbersForCustomer(int custId)
         {
             List<int> accNos = new List<int>();
             using (var conn = GetConnection())

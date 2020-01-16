@@ -31,8 +31,7 @@ namespace Banking.DBManager.Impl
                 TransactionType = reader["TransactionType"]
                     .ToString().ToCharArray()[0],
                 AccountNumber = (int)reader["AccountNumber"],
-                Amount = (decimal)reader["Amount"],
-                TransactionTimeUtc = (DateTime)reader["TransactionTimeUtc"]
+                Amount = (decimal)reader["Amount"]
             };
 
             t.DestinationAccountNumber =
@@ -40,7 +39,10 @@ namespace Banking.DBManager.Impl
                     (int?)null : (int)reader["DestinationAccountNumber"];
             t.Comment =
                 reader["Comment"] is DBNull ? null : (string)reader["Comment"];
-
+            t.TransactionTimeUtc =
+                DateTime.SpecifyKind((DateTime)reader["TransactionTimeUtc"],
+                    DateTimeKind.Utc);
+            
             return t;
         }
 

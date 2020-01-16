@@ -54,10 +54,17 @@ namespace Banking
             custJson = "[]";
             loginJson = "[]";
 
-            if (!CMgr.AnyCustomer())
-                custJson = Client.GetStringAsync(CustomerURL).Result;
-            if (!LMgr.AnyLogin())
-                loginJson = Client.GetStringAsync(LoginURL).Result;
+            try
+            {
+                if (!CMgr.AnyCustomer())
+                    custJson = Client.GetStringAsync(CustomerURL).Result;
+                if (!LMgr.AnyLogin())
+                    loginJson = Client.GetStringAsync(LoginURL).Result;
+            }
+            catch (Exception e)
+            {
+                throw new BankingException("Failed getting data from web serivce.", e);
+            }
         }
 
         public void InitCustomerFromJson(string custJson)
@@ -71,7 +78,6 @@ namespace Banking
                     {
                         t.TransactionType = 'D';
                         t.AccountNumber = a.AccountNumber;
-                        t.DestinationAccountNumber = a.AccountNumber;
                         t.Amount = a.Balance;
                         t.Comment = "account opening deposit";
                     })));
@@ -154,6 +160,12 @@ namespace Banking
 
             return a;
         }
+
+        public List<Account> GetAccountsForCustomer(int custId)
+        {
+            return AMgr.GetAccountsForCustomer(custId);
+        }
+
 
     }
 }

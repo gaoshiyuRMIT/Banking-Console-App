@@ -17,6 +17,7 @@ namespace Banking.DBManager
         public void WithDraw(int accNo, decimal amount, string comment);
         public void Transfer(int srcNo, int destNo, decimal amount,
             string comment);
+        public List<Account> GetAccountsForCustomer(int custId);
     }
 
     public class AccountManager : IAccountManager
@@ -180,5 +181,20 @@ namespace Banking.DBManager
 
             Impl.Transfer(srcNo, destNo, amount, comment, serviceFee);
         }
+
+        public List<Account> GetAccountsForCustomer(int custId)
+        {
+            List<Account> accounts = new List<Account>();
+            List<int> aNos = Impl.GetAccountNumbersForCustomer(custId);
+            foreach (int aNo in aNos)
+            {
+                Account a = Impl.GetAccountByAccountNumber(aNo);
+                accounts.Add(a);
+            }
+            return accounts;
+        }
+
     }
+
+
 }
