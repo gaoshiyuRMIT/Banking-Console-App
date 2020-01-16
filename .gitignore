@@ -2,6 +2,12 @@ appsettings.json
 .DS_Store
 *.sln
 
+/.vs
+/bin
+/obj
+
 /Banking/bin
 /Banking/obj
 /Banking/.vs
+
+/BankingTests
