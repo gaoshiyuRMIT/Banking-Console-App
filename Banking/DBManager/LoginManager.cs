@@ -4,19 +4,29 @@ using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using SimpleHashing;
 
+using Banking.DBManager.Impl;
+
 namespace Banking.DBManager
 {
     delegate bool CheckLogin(Login l, out Exception e);
 
-    public class LoginManager
+    public interface ILoginManager
     {
-        internal LoginManagerImpl Impl { get; }
+        public void AddLogin(Login l);
+        public bool Login(string loginId, string pwdInput,
+            out Customer cust);
+        public bool AnyLogin();
+    }
+
+    public class LoginManager : ILoginManager
+    {
+        private ILoginManagerImpl Impl { get; }
         private CustomerManager CMgr { get; }
 
-        public LoginManager(string connS)
+        public LoginManager(ILoginManagerImpl impl, ICustomerManagerImpl cmi)
         {
-            Impl = new LoginManagerImpl(connS);
-            CMgr = new CustomerManager(connS);
+            Impl = impl;
+            CMgr = new CustomerManager(cmi);
         }
 
         private bool CheckLoginID(Login l, out Exception err)
@@ -52,13 +62,14 @@ namespace Banking.DBManager
 
             Customer c = CMgr.GetCustomerByCustomerID(l.CustomerID);
             if (c is null)
-                throw new KeyNotFoundException(@"customer with this id as
-specified in the login detail does not exist. please add relevant customers first.");
+                throw new KeyNotFoundException(
+                    "customer with this id as specified in the login detail" +
+                    " does not exist. please add relevant customers first.");
 
             Impl.AddLogin(l.CustomerID, l.LoginID, l.PasswordHash);
         }
 
-        public bool CheckCredential(string loginId, string pwdInput,
+        public bool Login(string loginId, string pwdInput,
             out Customer cust)
         {
             int custId;
@@ -78,74 +89,4 @@ specified in the login detail does not exist. please add relevant customers firs
         }
     }
 
-    internal class LoginManagerImpl : DBManager
-    {
-        public LoginManagerImpl(string connS) : base(connS, "Login")
-        {
-        }
-
-        public void AddLogin(int custId, string loginId, string pwdHash)
-        {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"insert into {TableName}
-(LoginID, CustomerID, PasswordHash)
-values (@LoginId, @CustId, @PwdHash)";
-                command.Parameters.AddWithValue("LoginId", loginId);
-                command.Parameters.AddWithValue("CustId", custId);
-                command.Parameters.AddWithValue("PwdHash", pwdHash);
-
-                command.ExecuteNonQuery();
-            }
-        }
-
-        /*
-         * returns password hash;
-         * throws KeyNotFoundException if no records with this loginId exist
-         */
-        public string GetCredential(string loginId, out int custId)
-        {
-            custId = -1;
-
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"select CustomerID, PasswordHash from {TableName}
-where LoginID = @LoginId";
-                command.Parameters.AddWithValue("LoginId", loginId);
-
-                SqlDataReader reader = command.ExecuteReader();
-                if (reader.Read())
-                {
-                    custId = (int)reader["CustomerID"];
-                    return (string)reader["PasswordHash"];
-                }
-                reader.Close();
-            }
-            throw new KeyNotFoundException(
-                "no customer exists with specified login id");
-        }
-
-        public int CountLogin()
-        {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $"select count(*) from {TableName}";
-                SqlDataReader reader = command.ExecuteReader();
-                if (reader.Read())
-                {
-                    return (int)reader[0];
-                }
-                reader.Close();
-            }
-            throw new BankingException("sql count() returns 0 rows");
-        }
 }

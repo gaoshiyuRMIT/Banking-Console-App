@@ -6,48 +6,72 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 
 using Banking.DBManager;
+using Banking.DBManager.Impl;
 
 namespace Banking
 {
     public class Driver
     {
+        private static int TransactionPageSize { get; } = 4;
         private static IConfigurationRoot Config { get; } =
             new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        private static string ConnectionString { get; } =
+        private string ConnectionString { get; } =
             Config["ConnectionString"];
-        private static string CustomerURL { get; } = Config["CustomerAPI"];
-        private static string LoginURL { get; } = Config["LoginAPI"];
-        private static int TransactionPageSize { get; } = 4;
-        private static HttpClient Client { get; } = new HttpClient();
+        private string CustomerURL { get; } = Config["CustomerAPI"];
+        private string LoginURL { get; } = Config["LoginAPI"];
+        private HttpClient Client { get; } = new HttpClient();
 
-        public static AccountManager AMgr { get; }
-            = new AccountManager(ConnectionString);
-        public static TransactionManager TMgr { get; }
-            = new TransactionManager(ConnectionString);
-        public static CustomerManager CMgr { get; }
-            = new CustomerManager(ConnectionString);
-        public static LoginManager LMgr { get; }
-            = new LoginManager(ConnectionString);
+        private IAccountManager AMgr { get; }
+        private ITransactionManager TMgr { get; }    
+        private ICustomerManager CMgr { get; }
+        private ILoginManager LMgr { get; }
 
-        public Driver()
+
+
+        public Driver(bool noInit = false)
         {
-            InitDataFromWebServiceAsync().Wait();
+            ITransactionManagerImpl tmi =
+                new TransactionManagerImpl(ConnectionString);
+            IAccountManagerImpl ami =
+                new AccountManagerImpl(ConnectionString, tmi);
+            ICustomerManagerImpl cmi =
+                new CustomerManagerImpl(ConnectionString);
+            ILoginManagerImpl lmi =
+                new LoginManagerImpl(ConnectionString);
+
+            AMgr = new AccountManager(ami, tmi);
+            CMgr = new CustomerManager(cmi);
+            TMgr = new TransactionManager(tmi);
+            LMgr = new LoginManager(lmi, cmi);
+
+            if (!noInit)
+                InitDataFromWebService();
         }
 
-        public async Task InitDataFromWebServiceAsync()
+        public void GetJsonFromWebService(out string custJson,
+            out string loginJson)
         {
-            string custJson = "[]";
-            string loginJson = "[]";
-            
-            if (!CMgr.AnyCustomer())
-                custJson = await Client.GetStringAsync(CustomerURL);
-            if (!LMgr.AnyLogin())
-                loginJson = await Client.GetStringAsync(LoginURL);
+            custJson = "[]";
+            loginJson = "[]";
 
-            // add customers
+            try
+            {
+                if (!CMgr.AnyCustomer())
+                    custJson = Client.GetStringAsync(CustomerURL).Result;
+                if (!LMgr.AnyLogin())
+                    loginJson = Client.GetStringAsync(LoginURL).Result;
+            }
+            catch (Exception e)
+            {
+                throw new BankingException("Failed getting data from web serivce.", e);
+            }
+        }
+
+        public void InitCustomerFromJson(string custJson)
+        {
             List<Customer> customers =
                 new JsonUtil().Deserialize<List<Customer>>(custJson);
-              // add deposit transaction
+            // add deposit transaction
             customers.ForEach(c =>
                 c.Accounts.ForEach(a =>
                     a.Transactions.ForEach(t =>
@@ -55,13 +79,72 @@ namespace Banking
                         t.TransactionType = 'D';
                         t.AccountNumber = a.AccountNumber;
                         t.Amount = a.Balance;
+                        t.Comment = "account opening deposit";
                     })));
-            customers.ForEach(CMgr.AddCustomerRecursively);
+            customers.ForEach(AddCustomerRecursively);
+        }
 
-            // add Logins
+        public void InitLoginFromJson(string loginJson)
+        {
             List<Login> logins =
                 new JsonUtil().Deserialize<List<Login>>(loginJson);
             logins.ForEach(LMgr.AddLogin);
+        }
+
+        public void InitDataFromWebService()
+        {
+            string cj, lj;
+            GetJsonFromWebService(out cj, out lj);
+            InitCustomerFromJson(cj);
+            InitLoginFromJson(lj);
+        }
+
+
+        public void AddCustomerRecursively(Customer c)
+        {
+            CMgr.AddCustomer(c);
+            foreach (Account a in c.Accounts)
+            {
+                AMgr.AddAccount(a);
+                foreach (Transaction t in a.Transactions)
+                {
+                    TMgr.AddTransaction(t);
+                }
+            }
+        }
+
+        public Account GetAccountByAccountNumber(int accNo)
+        {
+            return AMgr.GetAccountByAccountNumber(accNo);
+        }
+
+        public void Deposit(int accNo, decimal amount, string comment)
+        {
+            AMgr.Deposit(accNo, amount, comment);
+        }
+
+        public void WithDraw(int accNo, decimal amount, string comment)
+        {
+            AMgr.WithDraw(accNo, amount, comment);
+        }
+
+        public void Transfer(int srcNo, int destNo, decimal amount,
+            string comment)
+        {
+            AMgr.Transfer(srcNo, destNo, amount, comment);
+        }
+
+        public Customer GetCustomerByCustomerID(int custId)
+        {
+            return CMgr.GetCustomerByCustomerID(custId);
+        }
+
+        /*
+         * returns whether login is successful
+         */
+        public bool Login(string loginId, string pwd, out Customer cust)
+        {
+            return LMgr.Login(loginId, pwd, out cust);
         }
 
         public Account GetPagedStatementByAccountNumber(int accNo, int page)
@@ -78,16 +161,11 @@ namespace Banking
             return a;
         }
 
-        /*
-         * if login is successful,
-         *      returns true
-         *      out param 'cust' holds the customer who is logged in
-         * else
-         *      returns false
-         *      out param 'cust' = null
-         */
-        public bool Login(string loginId, string pwd, out Customer cust) {
-            return LMgr.CheckCredential(loginId, pwd, out cust);
+        public List<Account> GetAccountsForCustomer(int custId)
+        {
+            return AMgr.GetAccountsForCustomer(custId);
         }
+
+
     }
 }

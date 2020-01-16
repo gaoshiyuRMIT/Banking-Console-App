@@ -3,21 +3,34 @@ using System.Data;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 
+using Banking.DBManager.Impl;
+
 namespace Banking.DBManager
 {
     delegate bool CheckTransaction(Transaction t, out Exception e);
 
-    public class TransactionManager
+    public interface ITransactionManager
     {
-        internal TransactionManagerImpl Impl { get; }
-        public static char[] Types { get; } = { 'D', 'W', 'T', 'S' };
-        public static double WithdrawFee { get; } = 0.1;
-        public static double TransferFee { get; } = 0.2;
-        public static int NFreeTransactions { get; } = 4;
+        public static char[] Types { get; }
+        public static Dictionary<char, decimal> ServiceFee { get; }
+        public static int NFreeTransactions { get; }
 
-        public TransactionManager(string connS)
+        public void AddTransaction(Transaction t);
+        public List<Transaction> GetTransactionsForAccount(int accNo,
+            int pageSize, int page);
+    }
+
+    public class TransactionManager : ITransactionManager
+    {
+        public static char[] Types { get; } = { 'D', 'W', 'T', 'S' };
+        public static Dictionary<char, decimal> ServiceFee { get; } =
+            new Dictionary<char, decimal> { { 'W', 0.1M }, { 'T', 0.2M } };
+        public static int NFreeTransactions { get; } = 4;
+        private ITransactionManagerImpl Impl { get; }
+
+        public TransactionManager(ITransactionManagerImpl impl)
         {
-            Impl = new TransactionManagerImpl(connS);
+            Impl = impl;
         }
 
         private bool CheckTransactionType(Transaction t, out Exception err)
@@ -61,11 +74,13 @@ namespace Banking.DBManager
             out Exception err)
         {
             err = null;
-            int destNo = t.DestinationAccountNumber;
-            if (t.TransactionType == 'T' && !(destNo >= 0 && destNo < 10000))
+            int? destNo = t.DestinationAccountNumber;
+            if (t.TransactionType == 'T' && destNo != null
+                && !(destNo >= 0 && destNo < 10000))
             {
-                string msg = @"for transfer transaction, destination account number
-must be specified and 4 digits long";
+                string msg = "for transfer transaction, "
+                    + "destination account number must be specified"
+                    + " and 4 digits long";
                 err = new ArgumentException(msg);
                 return false;
             }
@@ -77,9 +92,8 @@ must be specified and 4 digits long";
             Exception err;
             CheckTransaction[] rules =
             {
-                CheckTransactionType,
-                CheckAccountNumber,
-                CheckAccountNumber
+                CheckTransactionType, CheckAccountNumber,
+                CheckDestinationAccountNumber, CheckAmount
             };
             foreach (var check in rules)
                 if (!check(t, out err))
@@ -90,20 +104,9 @@ must be specified and 4 digits long";
             Impl.AddTransaction(t.TransactionType, t.AccountNumber,
                                 t.DestinationAccountNumber, t.Amount,
                                 t.Comment, t.TransactionTimeUtc);
-            if (nWT >= NFreeTransactions)
-            {
-                if (t.TransactionType == 'W')
-                    Impl.AddTransaction('S', t.AccountNumber,
-                        t.DestinationAccountNumber,
-                        WithdrawFee, "", DateTime.UtcNow);
-                else if (t.TransactionType == 'T')
-                    Impl.AddTransaction('S', t.AccountNumber,
-                        t.DestinationAccountNumber,
-                        TransferFee, "", DateTime.UtcNow);    
-            }            
         }
-        public List<Transaction> GetTransactionsForAccount(int accNo, int pageSize,
-    int page)
+        public List<Transaction> GetTransactionsForAccount(int accNo,
+            int pageSize, int page)
         {
             if (pageSize <= 0 || page <= 0)
                 throw new ArgumentException(
@@ -111,96 +114,5 @@ must be specified and 4 digits long";
             return Impl.GetTransactionsForAccount(accNo, pageSize, page);
         }
 
-    }
-
-    internal class TransactionManagerImpl : DBManager
-    {
-        public TransactionManagerImpl(string connS) : base(connS, "[Transaction]")
-        {
-        }
-
-        private static Transaction GetTransactionFromReader(SqlDataReader reader)
-        {
-            return new Transaction
-            {
-                TransactionType = (char)reader["TransactionType"],
-                AccountNumber = (int)reader["AccountNumber"],
-                DestinationAccountNumber = (int)reader["DestinationAccountNumber"],
-                Amount = (double)reader["Amount"],
-                Comment = (string)reader["Comment"],
-                TransactionTimeUtc = (DateTime)reader["TransactionTimeUtc"]
-            };
-        }
-
-        public void AddTransaction(char type, int accNo, int destAccNo,
-            double amount, string comment, DateTime time)
-        {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"insert into {TableName} (TransactionType, AccountNumber, DestinationAccountNumber, Amount, Comment, TransactionTimeUtc)
-values (@Type, @AccNo, @DestAccNo, @Amount, @Comment, @Time)";
-                command.Parameters.AddWithValue("Type", type);
-                command.Parameters.AddWithValue("AccNo", accNo);
-                command.Parameters.AddWithValue("DestAccNo", destAccNo);
-                command.Parameters.Add("Amount", SqlDbType.Money)
-                    .Value = amount;
-                command.Parameters.AddWithValue("Comment", comment);
-                command.Parameters.AddWithValue("Time", time);
-
-                command.ExecuteNonQuery();
-            }
-        }
-
-        // TODO: check page & pageSize > 0
-        public List<Transaction> GetTransactionsForAccount(int accNo, int pageSize,
-            int page)
-        {
-            List<Transaction> history = new List<Transaction>();
-            int offset = (page - 1) * pageSize;
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"select * from {TableName}
-where AccountNumber = @AccNo
-order by TransactionTimeUtc desc
-offset @Offset
-fetch next @PageSize only";
-                command.Parameters.AddWithValue("AccNo", accNo);
-                command.Parameters.AddWithValue("Offset", offset);
-                command.Parameters.AddWithValue("PageSize", pageSize);
-
-                SqlDataReader reader = command.ExecuteReader();
-                while (reader.Read())
-                {
-                    Transaction t = GetTransactionFromReader(reader);
-                    history.Add(t);
-                }
-                reader.Close();
-            }
-            return history;
-        }
-
-        public int CountChargedTransactions()
-        {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"select count(*)
-from {TableName} where TransactionType in ('W', 'T')";
-
-                SqlDataReader reader = command.ExecuteReader();
-                if (reader.Read())
-                    return (int)reader[0];
-                reader.Close();
-            }
-            throw new BankingException("sql count returns 0 rows");
-        }
     }
 }

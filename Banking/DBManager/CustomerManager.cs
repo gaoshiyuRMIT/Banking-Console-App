@@ -3,22 +3,29 @@ using System.Data;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 
+using Banking.DBManager.Impl;
+
 namespace Banking.DBManager
 {
     delegate bool CheckCustomer(Customer c, out Exception e);
 
-    public class CustomerManager
+    public interface ICustomerManager
     {
-        internal CustomerManagerImpl Impl { get; }
-        private AccountManager AMgr { get; }
+        public void AddCustomer(Customer c);
+        public Customer GetCustomerByCustomerID(int custId);
+        public bool AnyCustomer();
+    }
 
-        public CustomerManager(string connS)
+    public class CustomerManager : ICustomerManager
+    {
+        private ICustomerManagerImpl Impl { get; }
+
+        public CustomerManager(ICustomerManagerImpl impl)
         {
-            Impl = new CustomerManagerImpl(connS);
-            AMgr = new AccountManager(connS);
+            Impl = impl;
         }
 
-        public bool CheckCustomerID(Customer c, out Exception err)
+        private bool CheckCustomerID(Customer c, out Exception err)
         {
             err = null;
             if (c.CustomerID < 0 || c.CustomerID >= 10000)
@@ -28,15 +35,6 @@ namespace Banking.DBManager
                 return false;
             }
             return true;
-        }
-
-        public void AddCustomerRecursively(Customer c)
-        {
-            AddCustomer(c);
-            foreach (Account a in c.Accounts)
-            {
-                AMgr.AddAccountRecursively(a);
-            }
         }
 
         public void AddCustomer(Customer c)
@@ -67,77 +65,6 @@ namespace Banking.DBManager
         }
     }
 
-    internal class CustomerManagerImpl : DBManager {
 
-        public CustomerManagerImpl(string connS) : base(connS, "Customer") {
-        }
-
-        private static Customer GetCustomerFromReader(SqlDataReader reader)
-        {
-            return new Customer
-            {
-                CustomerID = (int)reader["CustomerID"],
-                Name = (string)reader["Name"],
-                Address = (string)reader["Address"],
-                City = (string)reader["City"],
-                PostCode = (string)reader["PostCode"]
-            };
-        }
-
-        public Customer GetCustomerByCustomerID(int id)
-        {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"select * from {TableName}
-where CustomerID = @Id";
-                command.Parameters.AddWithValue("Id", id);
-
-                SqlDataReader reader = command.ExecuteReader();
-                if (reader.Read())
-                    return GetCustomerFromReader(reader);
-                reader.Close();
-            }
-            return null;
-        }
-
-        public void AddCustomer(int id, string name, string address,
-            string city, string postcode) {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $@"insert into {TableName}
-(CustomerID, Name, Address, City, PostCode)
-values (@Id, @Name, @Address, @City, @Postcode)";
-                command.Parameters.AddWithValue("Id", id);
-                command.Parameters.AddWithValue("Name", name);
-                command.Parameters.AddWithValue("Address", address);
-                command.Parameters.AddWithValue("City", city);
-                command.Parameters.AddWithValue("Postcode", postcode);
-
-                command.ExecuteNonQuery();
-            }
-        }
-
-        public int CountCustomer()
-        {
-            using (var conn = GetConnection())
-            {
-                conn.Open();
-
-                SqlCommand command = conn.CreateCommand();
-                command.CommandText = $"select count(*) from {TableName}";
-
-                SqlDataReader reader = command.ExecuteReader();
-                if (reader.Read())
-                    return (int)reader[0];
-                reader.Close();
-            }
-            throw new BankingException("sql count() returns 0 rows");
-        }
 
 }
