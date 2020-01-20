@@ -86,7 +86,7 @@ namespace Banking.UINS
             while (true)
             {
                 Console.WriteLine("=========== Accounts ============");
-                for (int i = 0; i < 1; i++)
+                for (int i = 0; i < accs.Count; i++)
                     Console.WriteLine("{3}.    {0} Account {1}\n\tBalance:    {2}",
                         accs[i].AccountTypeStr, accs[i].AccountNumberStr,
                         accs[i].Balance, i + 1);
